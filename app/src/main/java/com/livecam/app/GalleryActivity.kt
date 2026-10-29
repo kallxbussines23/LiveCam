@@ -14,7 +14,7 @@ import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 
 class GalleryActivity : AppCompatActivity() {
-    private data class MediaItem(val uri: Uri, val name: String, val video: Boolean, val pairedVideo: Uri? = null)
+    private data class MediaItem(val uri: Uri, val name: String, val video: Boolean, val pairedVideo: Uri? = null, val motionPhoto: Boolean = false)
     private val items = mutableListOf<MediaItem>()
     private var visibleItems = listOf<MediaItem>()
     private lateinit var grid: GridView
@@ -99,7 +99,7 @@ class GalleryActivity : AppCompatActivity() {
             }
         }
         val clipsByKey = clips.associateBy { momentKey(it.name) }
-        photos.forEach { photo -> items.add(photo.copy(pairedVideo = clipsByKey[momentKey(photo.name)]?.uri)) }
+        photos.forEach { photo -> items.add(photo.copy(pairedVideo = clipsByKey[momentKey(photo.name)]?.uri, motionPhoto = photo.name.startsWith("MOTIONPHOTO_"))) }
         items.addAll(clips)
         applyFilter()
     }
@@ -110,7 +110,7 @@ class GalleryActivity : AppCompatActivity() {
         visibleItems = when (filter) {
             "PHOTO" -> items.filter { !it.video }
             "VIDEO" -> items.filter { it.video }
-            "LIVE" -> items.filter { !it.video && it.pairedVideo != null }
+            "LIVE" -> items.filter { !it.video && (it.motionPhoto || it.pairedVideo != null) }
             else -> items
         }
         count.text = visibleItems.size.toString() + " MEDIA • LIVE PHOTO DITANDAI ✦"
@@ -132,7 +132,7 @@ class GalleryActivity : AppCompatActivity() {
                 }
                 tile.addView(thumb)
                 tile.addView(TextView(this@GalleryActivity).apply {
-                    text = (if (item.video) "▶ " else if (item.pairedVideo != null) "✦ LIVE  " else "▣  ") + item.name
+                    text = (if (item.video) "▶ " else if (item.motionPhoto || item.pairedVideo != null) "✦ LIVE  " else "▣  ") + item.name
                     textSize = 10f; setTextColor(Color.BLACK); setPadding(4, 7, 4, 5)
                     maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
                 })
@@ -143,6 +143,15 @@ class GalleryActivity : AppCompatActivity() {
     }
 
     private fun openViewer(item: MediaItem) {
+        if (!item.video) {
+            val intent = android.content.Intent(this, PhotoViewerActivity::class.java).apply {
+                putExtra(PhotoViewerActivity.EXTRA_PHOTO_URI, item.uri.toString())
+                putExtra(PhotoViewerActivity.EXTRA_IS_MOTION, item.motionPhoto)
+                item.pairedVideo?.let { putExtra(PhotoViewerActivity.EXTRA_VIDEO_URI, it.toString()) }
+            }
+            startActivity(intent)
+            return
+        }
         val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL; setPadding(14, 14, 14, 14)
             setBackgroundColor(Color.rgb(255, 239, 190))
