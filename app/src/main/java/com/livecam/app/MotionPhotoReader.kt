@@ -14,7 +14,10 @@ object MotionPhotoReader {
         val file = File.createTempFile("motion_source_", ".bin", context.cacheDir)
         return try {
             val copied = context.contentResolver.openInputStream(uri)?.use { input ->
-                FileOutputStream(file).use { output -> input.copyTo(output) }
+                FileOutputStream(file).use { output ->
+                    input.copyTo(output)
+                    true
+                }
             } ?: false
             if (copied && file.length() > 32L) file else {
                 file.delete()
