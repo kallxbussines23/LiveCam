@@ -21,7 +21,7 @@ object MotionPhotoReader {
                     read += count
                 }
                 val header = String(prefix, 0, read, Charsets.ISO_8859_1)
-                val match = Regex("""MicroVideoOffset=["'](\\d+)["']""").find(header) ?: return false
+                val match = Regex("""MicroVideoOffset=["'](\d+)["']""").find(header) ?: return false
                 val videoLength = match.groupValues[1].toLongOrNull() ?: return false
                 if (videoLength <= 0L || videoLength >= length) return false
                 val start = length - videoLength
