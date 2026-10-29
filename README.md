@@ -1,10 +1,13 @@
 # LiveCam
 
-Android Native Kotlin camera app starter using CameraX.
+Android Native Kotlin camera and media gallery app using CameraX.
 
 ## Features
-- Live Photo mode (manual clip start/stop around the moment)
+- Comic-inspired 2D interface with bold outlines and bright colors
+- Live Photo mode with manual recording start/stop
 - Motion Photo mode (still photo + short video after shutter)
+- Built-in gallery with All, Photo, Video, and Live filters
+- Live moment viewer: open a paired photo and play its motion clip inside LiveCam
 - Front/back camera switch
 - Saves stills to Pictures/LiveCam and clips to Movies/LiveCam
 - Minimum Android 10 (API 29)
@@ -13,7 +16,7 @@ Android Native Kotlin camera app starter using CameraX.
 1. Clone/download this repository.
 2. Open the project root (folder containing settings.gradle).
 3. Sync Gradle and install dependencies.
-4. Run on an Android 10+ device and grant camera permission.
+4. Run on an Android 10+ device and grant camera and microphone permissions.
 
-## Important limitation
-This first version stores the still image and video as separate files. It does not yet create a single embedded JPEG/HEIC Motion Photo file. Live Photo uses a manual recording flow rather than an automatic pre-capture ring buffer. The gallery button opens the system gallery; an in-app paired-media gallery is planned.
+## Current limitations
+Still images and motion clips are stored as separate media files. LiveCam pairs its own photo and clip in the in-app gallery using a shared moment ID; it does not yet create a single embedded JPEG/HEIC Motion Photo file. Live Photo recording is manual and does not use an automatic pre-capture ring buffer. The in-app gallery currently focuses on browsing and playback.
