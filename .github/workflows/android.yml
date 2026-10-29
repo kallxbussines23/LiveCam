@@ -7,7 +7,8 @@ on:
 
 permissions:
   contents: read
- njobs:
+
+jobs:
   build:
     name: Build LiveCam APK
     runs-on: ubuntu-latest
