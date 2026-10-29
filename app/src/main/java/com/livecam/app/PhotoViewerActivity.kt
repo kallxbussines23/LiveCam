@@ -1,5 +1,6 @@
 package com.livecam.app
 
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
@@ -17,7 +18,9 @@ class PhotoViewerActivity : AppCompatActivity() {
     private lateinit var photo: ImageView
     private lateinit var video: VideoView
     private lateinit var playButton: Button
+    private lateinit var status: TextView
     private var tempVideo: File? = null
+    private var tempPhoto: File? = null
     private var motionUri: Uri? = null
     private var legacyVideoUri: Uri? = null
 
@@ -34,12 +37,22 @@ class PhotoViewerActivity : AppCompatActivity() {
         val root = android.widget.FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
         photo = ImageView(this).apply {
             scaleType = ImageView.ScaleType.FIT_CENTER
-            setImageURI(photoUri)
             contentDescription = "Fullscreen photo"
+            setBackgroundColor(Color.BLACK)
         }
-        video = VideoView(this).apply { visibility = View.GONE; setBackgroundColor(Color.BLACK) }
+        video = VideoView(this).apply {
+            visibility = View.GONE
+            setBackgroundColor(Color.BLACK)
+        }
+        status = TextView(this).apply {
+            text = "MEMBACA FOTO…"
+            textSize = 15f
+            gravity = Gravity.CENTER
+            setTextColor(Color.WHITE)
+        }
         root.addView(photo, android.widget.FrameLayout.LayoutParams(-1, -1))
         root.addView(video, android.widget.FrameLayout.LayoutParams(-1, -1))
+        root.addView(status, android.widget.FrameLayout.LayoutParams(-1, -1))
 
         val close = Button(this).apply {
             text = "✕"; textSize = 18f; setTextColor(Color.BLACK)
@@ -61,6 +74,43 @@ class PhotoViewerActivity : AppCompatActivity() {
         playParams.setMargins(16, 0, 16, 30)
         root.addView(playButton, playParams)
         setContentView(root)
+
+        if (isMotion) loadMotionPhoto(photoUri) else {
+            photo.setImageURI(photoUri)
+            status.visibility = View.GONE
+        }
+    }
+
+    private fun loadMotionPhoto(uri: Uri) {
+        val extracted = File(cacheDir, "viewer_photo_${System.currentTimeMillis()}.jpg")
+        tempPhoto = extracted
+        Thread {
+            val success = MotionPhotoReader.extractJpeg(this, uri, extracted)
+            val bitmap = if (success) {
+                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeFile(extracted.absolutePath, bounds)
+                val target = maxOf(resources.displayMetrics.widthPixels, resources.displayMetrics.heightPixels)
+                var sample = 1
+                while (bounds.outWidth / (sample * 2) >= target && bounds.outHeight / (sample * 2) >= target) {
+                    sample *= 2
+                }
+                BitmapFactory.decodeFile(
+                    extracted.absolutePath,
+                    BitmapFactory.Options().apply { inSampleSize = sample; inPreferredConfig = android.graphics.Bitmap.Config.RGB_565 }
+                )
+            } else null
+
+            runOnUiThread {
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                if (bitmap != null) {
+                    photo.setImageBitmap(bitmap)
+                    status.visibility = View.GONE
+                } else {
+                    status.text = "FOTO TIDAK DAPAT DIBACA"
+                    Toast.makeText(this, "JPEG Motion Photo gagal didekode", Toast.LENGTH_LONG).show()
+                }
+            }
+        }.start()
     }
 
     private fun hideSystemBars() {
@@ -79,12 +129,17 @@ class PhotoViewerActivity : AppCompatActivity() {
             startVideo(legacy)
             return
         }
-        val source = motionUri ?: return
-        val extracted = File(cacheDir, "viewer_motion_\${System.currentTimeMillis()}.mp4")
+        val source = motionUri ?: run { playButton.isEnabled = true; return }
+        val extracted = File(cacheDir, "viewer_motion_${System.currentTimeMillis()}.mp4")
         Thread {
             val success = MotionPhotoReader.extractVideo(this, source, extracted)
             runOnUiThread {
+                if (isFinishing || isDestroyed) {
+                    extracted.delete()
+                    return@runOnUiThread
+                }
                 if (success) {
+                    tempVideo?.delete()
                     tempVideo = extracted
                     startVideo(Uri.fromFile(extracted))
                 } else {
@@ -98,6 +153,7 @@ class PhotoViewerActivity : AppCompatActivity() {
 
     private fun startVideo(uri: Uri) {
         photo.visibility = View.GONE
+        status.visibility = View.GONE
         video.visibility = View.VISIBLE
         playButton.text = "■ KEMBALI KE FOTO"
         playButton.isEnabled = true
@@ -105,6 +161,7 @@ class PhotoViewerActivity : AppCompatActivity() {
             video.stopPlayback()
             video.visibility = View.GONE
             photo.visibility = View.VISIBLE
+            status.visibility = if (photo.drawable == null) View.VISIBLE else View.GONE
             playButton.text = "▶ PLAY MOMENT"
             playButton.setOnClickListener { playMotion() }
         }
@@ -114,6 +171,7 @@ class PhotoViewerActivity : AppCompatActivity() {
             Toast.makeText(this, "Video Motion Photo tidak bisa diputar", Toast.LENGTH_SHORT).show()
             video.visibility = View.GONE
             photo.visibility = View.VISIBLE
+            playButton.isEnabled = true
             true
         }
     }
@@ -121,6 +179,7 @@ class PhotoViewerActivity : AppCompatActivity() {
     override fun onDestroy() {
         video.stopPlayback()
         tempVideo?.delete()
+        tempPhoto?.delete()
         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         super.onDestroy()
     }
