@@ -30,6 +30,7 @@ class MainActivity : AppCompatActivity() {
     private var selector = CameraSelector.DEFAULT_BACK_CAMERA
     private var liveRecording = false
     private var mode = 0
+    private var currentMomentId = ""
 
     private val permissionRequest = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         if (it[Manifest.permission.CAMERA] == true) startCamera() else info.text = "Izin kamera diperlukan"
@@ -43,14 +44,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun buildUi() {
-        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(16,12,16,16); setBackgroundColor(android.graphics.Color.rgb(8,11,18)) }
+        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(16,12,16,16); setBackgroundColor(android.graphics.Color.rgb(255,239,190)) }
         val header = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
-        header.addView(TextView(this).apply { text = "LiveCam"; textSize = 25f; setTextColor(-1); setTypeface(null,1) }, LinearLayout.LayoutParams(0,-2,1f))
+        header.addView(TextView(this).apply { text = "LiveCam ✦"; textSize = 25f; setTextColor(android.graphics.Color.BLACK); setTypeface(null,1) }, LinearLayout.LayoutParams(0,-2,1f))
         modeButton = Button(this).apply { text = "LIVE PHOTO"; setOnClickListener { switchMode() } }
         header.addView(modeButton); root.addView(header)
         preview = PreviewView(this).apply { implementationMode = PreviewView.ImplementationMode.COMPATIBLE }
         root.addView(preview, LinearLayout.LayoutParams(-1,0,1f))
-        info = TextView(this).apply { text = "Siap mengambil momen"; gravity = Gravity.CENTER; textSize = 13f; setTextColor(0xFFCBD5E1.toInt()); setPadding(4,12,4,12) }
+        info = TextView(this).apply { text = "Siap mengambil momen"; gravity = Gravity.CENTER; textSize = 13f; setTextColor(android.graphics.Color.rgb(45,45,45)); setPadding(4,12,4,12) }
         root.addView(info)
         val controls = LinearLayout(this).apply { gravity = Gravity.CENTER }
         controls.addView(Button(this).apply { text = "GALERI"; setOnClickListener { openGallery() } })
@@ -82,11 +83,12 @@ class MainActivity : AppCompatActivity() {
         info.text = if (mode == 0) "Live Photo: tekan shutter untuk mulai dan berhenti" else "Motion Photo: foto + klip 3 detik"
     }
 
-    private fun fileName(prefix: String, ext: String) = prefix + "_" + SimpleDateFormat("yyyyMMdd_HHmmss",Locale.US).format(Date()) + ext
+    private fun fileName(prefix: String, ext: String) = prefix + "_" + currentMomentId + ext
 
     private fun takeMoment() {
         val capture = imageCapture ?: return
         shutter.isEnabled = false
+        currentMomentId = SimpleDateFormat("yyyyMMdd_HHmmss_SSS",Locale.US).format(Date())
         val values = ContentValues().apply { put(MediaStore.MediaColumns.DISPLAY_NAME,fileName("IMG",".jpg")); put(MediaStore.MediaColumns.MIME_TYPE,"image/jpeg"); put(MediaStore.Images.Media.RELATIVE_PATH,"Pictures/LiveCam") }
         val output = ImageCapture.OutputFileOptions.Builder(contentResolver,MediaStore.Images.Media.EXTERNAL_CONTENT_URI,values).build()
         capture.takePicture(output,ContextCompat.getMainExecutor(this),object: ImageCapture.OnImageSavedCallback {
@@ -117,6 +119,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun stopVideo() { recording?.stop(); recording = null }
     private fun flipCamera() { if (liveRecording) { stopVideo(); liveRecording = false }; selector = if (selector == CameraSelector.DEFAULT_BACK_CAMERA) CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA; startCamera() }
-    private fun openGallery() { val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply { setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,"image/*") }; try { startActivity(intent) } catch (_: Exception) { Toast.makeText(this,"Galeri tidak ditemukan",Toast.LENGTH_SHORT).show() } }
+    private fun openGallery() { startActivity(android.content.Intent(this, GalleryActivity::class.java)) }
     override fun onDestroy() { stopVideo(); super.onDestroy() }
 }
