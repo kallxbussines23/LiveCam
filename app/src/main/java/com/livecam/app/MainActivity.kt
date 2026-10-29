@@ -65,10 +65,12 @@ class MainActivity : AppCompatActivity() {
         future.addListener({
             val provider = future.get()
             val previewUseCase = androidx.camera.core.Preview.Builder().build().also { it.setSurfaceProvider(preview.surfaceProvider) }
-            imageCapture = ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY).build()
+            val photoUseCase = ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY).build()
+            imageCapture = photoUseCase
             val recorder = Recorder.Builder().setQualitySelector(QualitySelector.from(Quality.SD, FallbackStrategy.lowerQualityOrHigherThan(Quality.SD))).build()
-            videoCapture = VideoCapture.withOutput(recorder)
-            try { provider.unbindAll(); provider.bindToLifecycle(this,selector,previewUseCase,imageCapture,videoCapture); info.text = "Kamera aktif" }
+            val videoUseCase = VideoCapture.withOutput(recorder)
+            videoCapture = videoUseCase
+            try { provider.unbindAll(); provider.bindToLifecycle(this,selector,previewUseCase,photoUseCase,videoUseCase); info.text = "Kamera aktif" }
             catch (e: Exception) { info.text = "Kamera gagal: " + e.localizedMessage }
         }, ContextCompat.getMainExecutor(this))
     }
