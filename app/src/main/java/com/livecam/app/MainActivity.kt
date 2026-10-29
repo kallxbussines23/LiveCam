@@ -86,6 +86,12 @@ class MainActivity : AppCompatActivity() {
     private fun fileName(prefix: String, ext: String) = prefix + "_" + currentMomentId + ext
 
     private fun takeMoment() {
+        if (mode == 0 && liveRecording) {
+            stopVideo()
+            liveRecording = false
+            info.text = "Live Photo tersimpan ✦"
+            return
+        }
         val capture = imageCapture ?: return
         shutter.isEnabled = false
         currentMomentId = SimpleDateFormat("yyyyMMdd_HHmmss_SSS",Locale.US).format(Date())
